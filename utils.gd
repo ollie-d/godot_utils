@@ -168,3 +168,16 @@ func randi_range_array(from: int, to: int, length: int) -> Array:
 
 func mean(array: Array) -> float:
 	return float(array_sum(array)) / float(len(array))
+
+
+func variance(array: Array) -> float:
+	var sum: float = 0.0
+	var mean = mean(array)
+	for a in array:
+		sum += pow(a-mean, 2)
+	return sum / (len(array)-1)
+
+
+func std(array: Array) -> float:
+	# Standard deviation
+	return pow(variance(array), 0.5)
