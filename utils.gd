@@ -1,12 +1,17 @@
+# General utils singleton for my projects. At some point it might make sense
+# to have multiple of these seperated by scope, but for now having a single
+# autoload that I use in all of my projects sounds easier.
+#
+#TODO
+# 1. Add basic functionality of an `await X or Y` and `await X and Y`.
+#    https://github.com/godotengine/godot-proposals/issues/6243#issuecomment-1419495665
+
 extends Node
-# test4
+
 signal physics_timer_completed(name)
 
 var original_win_size
-
-# Dict to store physics timers
-var physics_timers = {}
-
+var physics_timers = {} # Dict to store physics timers
 var rng
 
 
@@ -15,7 +20,16 @@ func _ready():
 	randomize()
 	rng = RandomNumberGenerator.new()
 	rng.randomize()
-	print("Random Number: ", rng.randf_range(0.0, 1.0))
+
+
+func _physics_process(delta):
+	# The clock of physics_process should be set in `Params`
+	if physics_timers.size() > 0:
+		for key in physics_timers.keys():
+			physics_timers[key] -= 1
+			if physics_timers[key] <= 0:
+				emit_signal("physics_timer_completed", key)
+				physics_timers.erase(key)
 
 
 # Function to generate n-sided polygons such as fixation circle
@@ -56,12 +70,12 @@ func ms_to_frames(time_ms: float, refresh_rate: float) -> int:
 
 
 # Function to simply load a file and return contents as text
-func load_text(filename):
+func load_text(filename: String) -> String:
 	return FileAccess.open(filename, FileAccess.READ).get_as_text()
 
 
 # Function to parse 2D CSVs and return 2D Array
-func load_csv_to_array(filename):
+func load_csv_to_array(filename: String) -> Array:
 	var return_data = []
 	var raw_data = FileAccess.open(filename, FileAccess.READ)
 	while !raw_data.eof_reached():
@@ -69,7 +83,7 @@ func load_csv_to_array(filename):
 	return return_data
 
 
-func pix_to_font_size(pix):
+func pix_to_font_size(pix: float) -> float:
 	# Approximate the conversion from pixels to font size (with Open Sans)
 	# Here are the numbers I got
 	#TODO: find a better formula at some point
@@ -87,29 +101,18 @@ func pix_to_font_size(pix):
 	return roundi(pix / 0.724)
 
 
-func _physics_process(delta):
-	# The clock of physics_process should be set in `Params`
-	if physics_timers.size() > 0:
-		for key in physics_timers.keys():
-			physics_timers[key] -= 1
-			if physics_timers[key] <= 0:
-				emit_signal("physics_timer_completed", key)
-				physics_timers.erase(key)
-
-
-func physics_wait(timer_name: String, frame_delay: int):
+func physics_wait(timer_name: String, frame_delay: int) -> void:
 	# Wait for a certain number of frames using `_physics_process()`
 	#TODO: Re-write this using Engine.get_physics_frames()?
 	physics_timers[timer_name] = frame_delay
 	await self.physics_timer_completed == timer_name
-	pass
 
 
-func log_x(input, base):
+func log_x(input: float, base: float) -> float:
 	return log(input) / log(base)
 
 
-func R_A(f):
+func R_A(f: float) -> float:
 	# f is freq, this formula is from wikipedia
 	# https://en.wikipedia.org/wiki/A-weighting
 	# Note: the sqrt does not encapsulate the final addition
@@ -120,18 +123,18 @@ func R_A(f):
 	return numerator / denominator
 
 
-func A_weight(f):
+func A_weight(f: float) -> float:
 	# f is freq, this formula is from wikipedia
 	# https://en.wikipedia.org/wiki/A-weighting
 	return (20*log_x(R_A(f), 10)) - (20*log_x(R_A(1000), 10))
 
 
-func free_application():
+func free_application() -> void:
 	get_tree().root.propagate_notification(NOTIFICATION_WM_CLOSE_REQUEST)
 	get_tree().quit()
 
 
-func arrays_equal(arr1: Array, arr2: Array, err=0.001) -> bool:
+func arrays_equal(arr1: Array, arr2: Array, err: float = 0.001) -> bool:
 	# If error is 0, check if it's exactly the same
 	if err == 0:
 		return arr1.hash() == arr2.hash()
@@ -145,7 +148,7 @@ func arrays_equal(arr1: Array, arr2: Array, err=0.001) -> bool:
 	return true
 
 
-func array_sum(array: Array):
+func array_sum(array: Array) -> float:
 	var sum := 0.0
 	for i in array:
 		sum += i
@@ -181,3 +184,9 @@ func variance(array: Array) -> float:
 func std(array: Array) -> float:
 	# Standard deviation
 	return pow(variance(array), 0.5)
+
+
+func add_signal(sig: String, props: Array) -> void:
+	if !self.has_signal(sig):
+		add_user_signal(sig, props)
+
