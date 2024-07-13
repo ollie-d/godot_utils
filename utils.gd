@@ -8,11 +8,17 @@
 
 extends Node
 
-signal physics_timer_completed(name)
+signal fps_initialized
 
 var original_win_size
-var physics_timers = {} # Dict to store physics timers
-var rng
+var physics_timers := {}
+var process_timers := {}
+var rng: RandomNumberGenerator
+var avg_delta: float
+var avg_delta_ms: float
+var half_delta: float
+var half_delta_ms: float
+var fps: float = -9
 
 
 func _ready():
@@ -23,13 +29,44 @@ func _ready():
 
 
 func _physics_process(delta):
-	# The clock of physics_process should be set in `Params`
 	if physics_timers.size() > 0:
 		for key in physics_timers.keys():
 			physics_timers[key] -= 1
 			if physics_timers[key] <= 0:
-				emit_signal("physics_timer_completed", key)
+				emit_signal(key)
 				physics_timers.erase(key)
+
+
+func _process(delta):
+	if (fps < 0) and (Engine.get_frames_drawn() >= 200):
+		fps = Engine.get_frames_per_second()
+		avg_delta = 1.0/fps
+		half_delta = avg_delta/2.0
+		avg_delta_ms = avg_delta*1000.0
+		half_delta_ms = half_delta*1000.0
+		emit_signal("fps_initialized")
+	elif process_timers.size() > 0:
+		for key in process_timers.keys():
+			process_timers[key] -= (delta*1000.0)
+			if process_timers[key] <= half_delta_ms: # i.e. round()
+				emit_signal(key)
+				process_timers.erase(key)
+
+
+func wait(delay_ms: float, timer_name: String = '') -> void:
+	if timer_name == '':
+		timer_name = str(randf())
+	process_timers[timer_name] = delay_ms
+	add_signal(timer_name)
+	await Signal(self, timer_name)
+
+
+func physics_wait(frame_delay: int, timer_name: String = '') -> void:
+	if timer_name == '':
+		timer_name = str(randf())
+	physics_timers[timer_name] = frame_delay
+	add_signal(timer_name)
+	await Signal(self, timer_name)
 
 
 # Function to generate n-sided polygons such as fixation circle
@@ -99,13 +136,6 @@ func pix_to_font_size(pix: float) -> float:
 	# 13/18 == 0.7222222222222222
 	# Average := 0.7240383089998802
 	return roundi(pix / 0.724)
-
-
-func physics_wait(timer_name: String, frame_delay: int) -> void:
-	# Wait for a certain number of frames using `_physics_process()`
-	#TODO: Re-write this using Engine.get_physics_frames()?
-	physics_timers[timer_name] = frame_delay
-	await self.physics_timer_completed == timer_name
 
 
 func log_x(input: float, base: float) -> float:
@@ -186,7 +216,16 @@ func std(array: Array) -> float:
 	return pow(variance(array), 0.5)
 
 
-func add_signal(sig: String, props: Array) -> void:
+func add_signal(sig: String, props: Array = []) -> void:
 	if !self.has_signal(sig):
 		add_user_signal(sig, props)
 
+
+func fade_in(node: Node, property: String, animation_time_ms: float) -> void:
+	var tween_in = get_tree().create_tween()
+	tween_in.tween_property(node, property, 1.0, animation_time_ms/1000.0)
+
+
+func fade_out(node: Node, property: String, animation_time_ms: float) -> void:
+	var tween_out = get_tree().create_tween()
+	tween_out.tween_property(node, property, 0.0, animation_time_ms/1000.0)
