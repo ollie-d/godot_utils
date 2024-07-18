@@ -19,6 +19,7 @@ var avg_delta_ms: float
 var half_delta: float
 var half_delta_ms: float
 var fps: float = -9
+var num_stable_frames: int = 200
 
 
 func _ready():
@@ -38,14 +39,16 @@ func _physics_process(delta):
 
 
 func _process(delta):
-	if (fps < 0) and (Engine.get_frames_drawn() >= 200):
+	# Initialization
+	if (fps < 0) and (Engine.get_frames_drawn() >= num_stable_frames):
 		fps = Engine.get_frames_per_second()
 		avg_delta = 1.0/fps
 		half_delta = avg_delta/2.0
 		avg_delta_ms = avg_delta*1000.0
 		half_delta_ms = half_delta*1000.0
 		emit_signal("fps_initialized")
-	elif process_timers.size() > 0:
+	
+	if (process_timers.size() > 0) and (fps >= 0):
 		for key in process_timers.keys():
 			process_timers[key] -= (delta*1000.0)
 			if process_timers[key] <= half_delta_ms: # i.e. round()
