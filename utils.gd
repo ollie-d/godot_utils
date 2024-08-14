@@ -20,6 +20,8 @@ var half_delta: float
 var half_delta_ms: float
 var fps: float = -9
 var num_stable_frames: int = 200
+var websocket_client: WebSocketClient
+var websocket_active := false
 
 
 func _ready():
@@ -232,3 +234,22 @@ func fade_in(node: Node, property: String, animation_time_ms: float) -> void:
 func fade_out(node: Node, property: String, animation_time_ms: float) -> void:
 	var tween_out = get_tree().create_tween()
 	tween_out.tween_property(node, property, 0.0, animation_time_ms/1000.0)
+
+
+func ws_connect_to_server(url: Variant) -> int:
+	#TODO: check that we are not already connected
+	if !websocket_active:
+		websocket_client = WebSocketClient.new()
+		websocket_client.connect("connected_to_server", ws_connected_to_server)
+		add_child(websocket_client)
+		websocket_active = true
+	
+	var err = websocket_client.connect_to_url(url)
+	if err != OK:
+		push_warning('Error connecting to host %s' % url)
+	return err
+
+
+func ws_connected_to_server():
+	print('connected')
+	pass
