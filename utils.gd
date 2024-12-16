@@ -236,11 +236,27 @@ func fade_out(node: Node, property: String, animation_time_ms: float) -> void:
 	tween_out.tween_property(node, property, 0.0, animation_time_ms/1000.0)
 
 
+func _on_ws_connected_to_server():
+	print('websocket client connected')
+	pass
+
+
+func _on_ws_connection_closed():
+	var ws = websocket_client.get_socket()
+	print("Client just disconnected with code: %s, reson: %s" % [ws.get_close_code(), ws.get_close_reason()])
+
+
+func _on_ws_message_received(message):
+	print("%s" % message)
+
+
 func ws_connect_to_server(url: Variant) -> int:
 	#TODO: check that we are not already connected
 	if !websocket_active:
 		websocket_client = WebSocketClient.new()
-		websocket_client.connect("connected_to_server", ws_connected_to_server)
+		websocket_client.connect("connected_to_server", _on_ws_connected_to_server)
+		websocket_client.connect("connection_closed", _on_ws_connection_closed)
+		websocket_client.connect("message_received", _on_ws_message_received)
 		add_child(websocket_client)
 		websocket_active = true
 	
@@ -250,6 +266,10 @@ func ws_connect_to_server(url: Variant) -> int:
 	return err
 
 
-func ws_connected_to_server():
-	print('connected')
-	pass
+func ws_send_data(data: String, send_timestamp: bool = true) -> void:
+	if websocket_active:
+		var data_to_send := data
+		if send_timestamp:
+			data_to_send = '{t},{d}'.format({'t':Time.get_ticks_msec(), 'd':data})
+		
+		websocket_client.send(data_to_send)
