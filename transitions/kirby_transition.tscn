@@ -1,0 +1,14 @@
+[gd_scene load_steps=2 format=3 uid="uid://b1qxxhnc0edbx"]
+
+[ext_resource type="Script" path="res://Utils/transitions/kirby_transition.gd" id="1_b1ymf"]
+
+[node name="KirbyTransition" type="Node2D"]
+script = ExtResource("1_b1ymf")
+initial_color = Color(0.0747211, 0.286846, 0.259436, 1)
+final_color = Color(0.54902, 0.301961, 0, 1)
+radius = 16.0
+
+[node name="p2d_initial_fill" type="Polygon2D" parent="."]
+unique_name_in_owner = true
+color = Color(0, 0.796078, 0, 1)
+polygon = PackedVector2Array(0, 0, 0, 1368, 2560, 1368, 2560, 0)
