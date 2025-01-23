@@ -22,6 +22,43 @@ var fps: float = -9
 var num_stable_frames: int = 200
 var websocket_client: WebSocketClient
 var websocket_active := false
+var fps_deque: Deque
+var previous_frames_drawn_count: int = 0
+var physics_previous_frames_drawn_count: int = 0
+var frames_dropped: int = 0
+var physics_frames_dropped: int = 0
+
+
+class Deque:
+	var deque_size: int = 0
+	var data: Array = []
+	
+	static func create(_size: int = 0) -> Deque:
+		var deque_instance = Deque.new()
+		deque_instance.deque_size = _size
+		deque_instance.data.resize(_size)
+		
+		return deque_instance
+	
+	func append(value: Variant) -> void:
+		if len(data) >= deque_size:
+			data.pop_front()
+		data.push_back(value)
+	
+	
+	func fill(fill_with: Variant) -> void:
+		data.fill(fill_with)
+	
+	
+	func resize(new_size: int) -> void:
+		if new_size >= 0:
+			if new_size < deque_size:
+				data = data.slice(0, new_size)
+			deque_size = new_size
+			data.resize(deque_size)
+	
+	func size() -> int:
+		return len(data)
 
 
 func _ready():
@@ -29,9 +66,18 @@ func _ready():
 	randomize()
 	rng = RandomNumberGenerator.new()
 	rng.randomize()
+	fps_deque = Deque.create(num_stable_frames)
 
 
 func _physics_process(delta):
+	#NOTE: This is constantly live, but the physics only gets set to match
+	#      the refresh rate after a task is started.
+	
+	# Check for frames dropped
+	if Engine.get_frames_drawn() != physics_previous_frames_drawn_count + 1:
+		physics_frames_dropped += 1
+	physics_previous_frames_drawn_count = Engine.get_frames_drawn()
+	
 	if physics_timers.size() > 0:
 		for key in physics_timers.keys():
 			physics_timers[key] -= 1
@@ -41,24 +87,36 @@ func _physics_process(delta):
 
 
 func _process(delta):
+	# Check for frames dropped
+	if Engine.get_frames_drawn() != previous_frames_drawn_count + 1:
+		frames_dropped += 1
+		print('frame dropped')
+	previous_frames_drawn_count = Engine.get_frames_drawn()
+	
 	# Initialization
 	if (fps < 0) and (Engine.get_frames_drawn() >= num_stable_frames):
 		fps = Engine.get_frames_per_second()
 		avg_delta = 1.0/fps
-		half_delta = avg_delta/2.0
 		avg_delta_ms = avg_delta*1000.0
-		half_delta_ms = half_delta*1000.0
 		emit_signal("fps_initialized")
+	elif Engine.get_frames_drawn() >= num_stable_frames:
+		fps_deque.append(Engine.get_frames_per_second())
+		#fps = mode(fps_deque.data) # don't recalculate fps every frame...
+		
 	
 	if (process_timers.size() > 0) and (fps >= 0):
 		for key in process_timers.keys():
 			process_timers[key] -= (delta*1000.0)
-			if process_timers[key] <= half_delta_ms: # i.e. round()
+			if process_timers[key] <= avg_delta_ms/2: # i.e. round()
 				emit_signal(key)
 				process_timers.erase(key)
 
 
 func wait(delay_ms: float, timer_name: String = '') -> void:
+	# Time-based waiting
+	# NOTE:
+	# this seems to produce very inaccurate responses right now.
+	# need to figure out why -- for now use physics_wait
 	if timer_name == '':
 		timer_name = str(randf())
 	process_timers[timer_name] = delay_ms
@@ -67,6 +125,7 @@ func wait(delay_ms: float, timer_name: String = '') -> void:
 
 
 func physics_wait(frame_delay: int, timer_name: String = '') -> void:
+	# Frame-based waiting
 	if timer_name == '':
 		timer_name = str(randf())
 	physics_timers[timer_name] = frame_delay
@@ -75,14 +134,15 @@ func physics_wait(frame_delay: int, timer_name: String = '') -> void:
 
 
 # Function to generate n-sided polygons such as fixation circle
-func generate_nsided_polygon(radius: float, num_sides: int, position: Vector2) -> PackedVector2Array:
-	# Function from SanderVanhove (https://ask.godotengine.org/81776/)
+func generate_nsided_polygon(radius: float, num_sides: int = 16) -> PackedVector2Array:
+	# Function adapted from SanderVanhove (https://ask.godotengine.org/81776/)
+	# NOTE: this will center around 0 and then must be positioned afterwards
 	var angle_delta: float = (PI * 2) / num_sides
 	var vector: Vector2 = Vector2(radius, 0)
 	var polygon: PackedVector2Array
 
 	for _i in num_sides:
-		polygon.append(vector + position)
+		polygon.append(vector)
 		vector = vector.rotated(angle_delta)
 
 	return polygon
@@ -221,6 +281,27 @@ func std(array: Array) -> float:
 	return pow(variance(array), 0.5)
 
 
+func mode(array: Array, ignore_null: bool = true) -> Variant:
+	# This technically works on anything, not just numbers, which is cool?
+	var counting_dict = {}
+	var mode_frequency = 0
+	var mode
+	for item in array:
+		if (item == null) and (ignore_null):
+			continue
+		
+		if item in counting_dict.keys():
+			counting_dict[item] += 1
+		else:
+			counting_dict[item] = 1
+		
+		if counting_dict[item] > mode_frequency:
+			mode_frequency = counting_dict[item]
+			mode = item
+	
+	return mode
+
+
 func add_signal(sig: String, props: Array = []) -> void:
 	if !self.has_signal(sig):
 		add_user_signal(sig, props)
@@ -273,3 +354,8 @@ func ws_send_data(data: String, send_timestamp: bool = true) -> void:
 			data_to_send = '{t},{d}'.format({'t':Time.get_ticks_msec(), 'd':data})
 		
 		websocket_client.send(data_to_send)
+
+
+func change_scene(scene_path: String) -> void:
+	assert(ResourceLoader.exists(scene_path))
+	get_tree().change_scene_to_file(scene_path)
