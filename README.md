@@ -1,8 +1,5 @@
 # Godot Utils
 Expected use is to have this repository be submoduled by my other repositories. For now I'll just keep everything within a single utils file, but this might change at some point, idk.
-V1
 
-
-V2?
-
-Test002
+Tool Debug:
+Test003
