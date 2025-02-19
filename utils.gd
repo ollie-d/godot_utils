@@ -14,6 +14,7 @@ var original_win_size
 var physics_timers := {}
 var process_timers := {}
 var rng: RandomNumberGenerator
+var rng_initialized: bool = false
 var avg_delta: float
 var avg_delta_ms: float
 var half_delta: float
@@ -62,11 +63,16 @@ class Deque:
 
 
 func _ready():
-	# Set up RNG
-	randomize()
-	rng = RandomNumberGenerator.new()
-	rng.randomize()
-	fps_deque = Deque.create(num_stable_frames)
+	initialize_rng()
+
+
+func initialize_rng() -> void:
+	if !rng_initialized:
+		randomize()
+		rng = RandomNumberGenerator.new()
+		rng.randomize()
+		fps_deque = Deque.create(num_stable_frames)
+		rng_initialized = true
 
 
 func _physics_process(delta):
