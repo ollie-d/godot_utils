@@ -365,3 +365,10 @@ func ws_send_data(data: String, send_timestamp: bool = true) -> void:
 func change_scene(scene_path: String) -> void:
 	assert(ResourceLoader.exists(scene_path))
 	get_tree().change_scene_to_file(scene_path)
+
+
+func cursor_visible(state: bool):
+	if state:
+		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+	else:
+		Input.set_mouse_mode(Input.MOUSE_MODE_HIDDEN)
