@@ -29,6 +29,8 @@ var physics_previous_frames_drawn_count: int = 0
 var frames_dropped: int = 0
 var physics_frames_dropped: int = 0
 
+signal frame_dropped
+signal physics_frame_dropped
 
 class Deque:
 	var deque_size: int = 0
@@ -80,9 +82,10 @@ func _physics_process(delta):
 	#      the refresh rate after a task is started.
 	
 	# Check for frames dropped
-	if Engine.get_frames_drawn() != physics_previous_frames_drawn_count + 1:
+	if Engine.get_physics_frames() != physics_previous_frames_drawn_count + 1:
 		physics_frames_dropped += 1
-	physics_previous_frames_drawn_count = Engine.get_frames_drawn()
+		emit_signal('physics_frame_dropped')
+	physics_previous_frames_drawn_count = Engine.get_physics_frames()
 	
 	if physics_timers.size() > 0:
 		for key in physics_timers.keys():
@@ -96,6 +99,7 @@ func _process(delta):
 	# Check for frames dropped
 	if Engine.get_frames_drawn() != previous_frames_drawn_count + 1:
 		frames_dropped += 1
+		emit_signal('frame_dropped')
 		print('frame dropped')
 	previous_frames_drawn_count = Engine.get_frames_drawn()
 	
