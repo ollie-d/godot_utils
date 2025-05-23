@@ -14,6 +14,7 @@ var original_win_size
 var physics_timers := {}
 var process_timers := {}
 var rng: RandomNumberGenerator
+var rng_initialized: bool = false
 var avg_delta: float
 var avg_delta_ms: float
 var half_delta: float
@@ -28,6 +29,8 @@ var physics_previous_frames_drawn_count: int = 0
 var frames_dropped: int = 0
 var physics_frames_dropped: int = 0
 
+signal frame_dropped
+signal physics_frame_dropped
 
 class Deque:
 	var deque_size: int = 0
@@ -62,11 +65,16 @@ class Deque:
 
 
 func _ready():
-	# Set up RNG
-	randomize()
-	rng = RandomNumberGenerator.new()
-	rng.randomize()
-	fps_deque = Deque.create(num_stable_frames)
+	initialize_rng()
+
+
+func initialize_rng() -> void:
+	if !rng_initialized:
+		randomize()
+		rng = RandomNumberGenerator.new()
+		rng.randomize()
+		fps_deque = Deque.create(num_stable_frames)
+		rng_initialized = true
 
 
 func _physics_process(delta):
@@ -74,9 +82,10 @@ func _physics_process(delta):
 	#      the refresh rate after a task is started.
 	
 	# Check for frames dropped
-	if Engine.get_frames_drawn() != physics_previous_frames_drawn_count + 1:
+	if Engine.get_physics_frames() != physics_previous_frames_drawn_count + 1:
 		physics_frames_dropped += 1
-	physics_previous_frames_drawn_count = Engine.get_frames_drawn()
+		emit_signal('physics_frame_dropped')
+	physics_previous_frames_drawn_count = Engine.get_physics_frames()
 	
 	if physics_timers.size() > 0:
 		for key in physics_timers.keys():
@@ -90,6 +99,7 @@ func _process(delta):
 	# Check for frames dropped
 	if Engine.get_frames_drawn() != previous_frames_drawn_count + 1:
 		frames_dropped += 1
+		emit_signal('frame_dropped')
 		print('frame dropped')
 	previous_frames_drawn_count = Engine.get_frames_drawn()
 	
@@ -359,3 +369,10 @@ func ws_send_data(data: String, send_timestamp: bool = true) -> void:
 func change_scene(scene_path: String) -> void:
 	assert(ResourceLoader.exists(scene_path))
 	get_tree().change_scene_to_file(scene_path)
+
+
+func cursor_visible(state: bool):
+	if state:
+		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
+	else:
+		Input.set_mouse_mode(Input.MOUSE_MODE_HIDDEN)
