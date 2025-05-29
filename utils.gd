@@ -376,3 +376,10 @@ func cursor_visible(state: bool):
 		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 	else:
 		Input.set_mouse_mode(Input.MOUSE_MODE_HIDDEN)
+
+
+func remove_all_children(parent: Node) -> void:
+	# Works in place
+	for child in parent.get_children():
+		parent.remove_child(child)
+		child.queue_free()
