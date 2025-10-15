@@ -239,6 +239,31 @@ func free_application() -> void:
 	get_tree().quit()
 
 
+func flatten(array: Array) -> Array:
+	var new_array: Array = []
+	for array_item in array:
+		if array_item is Array:
+			for item in array_item:
+				new_array.append(item)
+		else:
+			new_array.append(array_item)
+	
+	return new_array
+
+
+func count_jagged_array(array: Array, search_term: Variant) -> int:
+	var count: int = 0
+	for array_item in array:
+		if array_item is Array:
+			for item in array_item:
+				if item == search_term:
+					count += 1
+		elif array_item == search_term:
+			count += 1
+		
+	return count
+
+
 func arrays_equal(arr1: Array, arr2: Array, err: float = 0.001) -> bool:
 	# If error is 0, check if it's exactly the same
 	if err == 0:
