@@ -277,6 +277,7 @@ func arrays_equal(arr1: Array, arr2: Array, err: float = 0.001) -> bool:
 			return false
 	return true
 
+
 func arange(start: int, stop: int, step:int=1) -> Array:
 	var return_array = []
 	for i in range(start, stop, step):
@@ -416,6 +417,7 @@ func cursor_visible(state: bool):
 		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 	else:
 		Input.set_mouse_mode(Input.MOUSE_MODE_HIDDEN)
+
 
 func remove_all_children(parent: Node) -> void:
 	# Works in place
