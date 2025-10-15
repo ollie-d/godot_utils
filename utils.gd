@@ -277,6 +277,21 @@ func arrays_equal(arr1: Array, arr2: Array, err: float = 0.001) -> bool:
 			return false
 	return true
 
+func arange(start: int, stop: int, step:int=1) -> Array:
+	var return_array = []
+	for i in range(start, stop, step):
+		return_array.append(i)
+	return return_array
+
+
+func shuffle_by_indices(array_to_shuffle: Array, array_of_indices: Array) -> Array:
+	# This will move elements in array_to_shuffle according to array_of_indices
+	# The original indices are assumed by array_to_shuffle (e.g. sorted from 0)
+	var shuffled_array: Array = []
+	for ix in array_of_indices:
+		shuffled_array.append(array_to_shuffle[ix])
+	return shuffled_array
+
 
 func array_sum(array: Array) -> float:
 	var sum := 0.0
@@ -401,3 +416,9 @@ func cursor_visible(state: bool):
 		Input.set_mouse_mode(Input.MOUSE_MODE_VISIBLE)
 	else:
 		Input.set_mouse_mode(Input.MOUSE_MODE_HIDDEN)
+
+func remove_all_children(parent: Node) -> void:
+	# Works in place
+	for child in parent.get_children():
+		parent.remove_child(child)
+		child.queue_free()
